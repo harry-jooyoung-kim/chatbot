@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>챗봇</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #f3e9e0 100%);
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 420px;
+            margin: 60px auto;
+            background: #fff;
+            border-radius: 24px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 36px 28px 28px 28px;
+            text-align: center;
+        }
+        h1 {
+            color: #5a4a3f;
+            margin-bottom: 32px;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .chatbox {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+        #user-input {
+            flex: 1;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid #e0d7ce;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+        #user-input:focus {
+            border: 1.5px solid #c7b299;
+        }
+        button {
+            padding: 0 18px;
+            border: none;
+            background: #e6d3c5;
+            color: #5a4a3f;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #d2bba3;
+        }
+        #upload-btn {
+            background: #f5e6d8;
+            color: #a68a6d;
+            font-size: 1.3rem;
+            padding: 0 14px;
+        }
+        #upload-btn:hover {
+            background: #e2cdb7;
+        }
+        #chat-history {
+            margin-top: 24px;
+            margin-bottom: 10px;
+            background: #f8f5f2;
+            border-radius: 10px;
+            padding: 18px 14px;
+            min-height: 120px;
+            max-height: 260px;
+            overflow-y: auto;
+            font-size: 1.08rem;
+            text-align: left;
+            word-break: break-all;
+        }
+        .chat-msg {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-msg.user {
+            align-items: flex-end;
+        }
+        .chat-msg.bot {
+            align-items: flex-start;
+        }
+        .msg-bubble {
+            display: inline-block;
+            padding: 8px 14px;
+            border-radius: 16px;
+            max-width: 80%;
+        }
+        .user .msg-bubble {
+            background: #e6d3c5;
+            color: #5a4a3f;
+        }
+        .bot .msg-bubble {
+            background: #f5e6d8;
+            color: #5a4a3f;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+                box-shadow: none;
+                padding: 18px 6vw 24px 6vw;
+            }
+            h1 {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Harry님, 무슨 일 있으신가요?</h1>
+        <div id="chat-history"></div>
+        <div class="chatbox">
+            <input type="text" id="user-input" placeholder="오늘 어떤 도움을 드릴까요?" onkeydown="if(event.key==='Enter'){sendMessage();}">
+            <button onclick="sendMessage()">전송</button>
+            <button id="upload-btn" onclick="document.getElementById('file-input').click()">+</button>
+            <input type="file" id="file-input" style="display:none" onchange="uploadFile()">
+        </div>
+    </div>
+    <script>
+        let chatHistory = [];
+        function renderChatHistory() {
+            const historyDiv = document.getElementById('chat-history');
+            historyDiv.innerHTML = '';
+            chatHistory.forEach(msg => {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'chat-msg ' + msg.role;
+                const bubble = document.createElement('div');
+                bubble.className = 'msg-bubble';
+                bubble.innerText = msg.content;
+                msgDiv.appendChild(bubble);
+                historyDiv.appendChild(msgDiv);
+            });
+            historyDiv.scrollTop = historyDiv.scrollHeight;
+        }
+        function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if (!message) return;
+            chatHistory.push({role: 'user', content: message});
+            renderChatHistory();
+            input.value = '';
+            fetch('/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: message})
+            })
+            .then(response => response.json())
+            .then(data => {
+                chatHistory.push({role: 'bot', content: data.response});
+                renderChatHistory();
+            });
+        }
+        function uploadFile() {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+            });
+        }
+        // 최초 렌더링
+        renderChatHistory();
+    </script>
+</body>
+</html> 
